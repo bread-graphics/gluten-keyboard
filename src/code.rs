@@ -1,8 +1,10 @@
 
 // AUTO GENERATED CODE - DO NOT EDIT
 
-use std::fmt::{self, Display};
-use std::str::FromStr;
+use core::fmt::{self, Display};
+use core::str::FromStr;
+
+#[cfg(feature = "std")]
 use std::error::Error;
 
 /// Code is the physical position of a key.
@@ -13,8 +15,8 @@ use std::error::Error;
 ///
 /// Specification:
 /// <https://w3c.github.io/uievents-code/>
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[non_exhaustive]
 pub enum Code {
     /// <code class="keycap">`~</code> on a US keyboard. This is the <code class="keycap">半角/全角/漢字</code> (<span class="unicode">hankaku/zenkaku/kanji</span>) key on Japanese keyboards
@@ -879,5 +881,6 @@ impl fmt::Display for UnrecognizedCodeError {
     }
 }
 
+#[cfg(feature = "std")]
 impl Error for UnrecognizedCodeError {}
     

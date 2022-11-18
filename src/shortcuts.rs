@@ -1,4 +1,4 @@
-use {Key, KeyState, KeyboardEvent, Modifiers};
+use crate::{Key, KeyState, KeyboardEvent, Modifiers};
 
 /// Match keyboard shortcuts and excute actions.
 ///
@@ -15,17 +15,17 @@ use {Key, KeyState, KeyboardEvent, Modifiers};
 /// the shift, control, alt and meta modifiers into account.
 /// If other modifiers beside those expected are found
 /// the shortcut is not matched.
-pub struct ShortcutMatcher<T> {
+pub struct ShortcutMatcher<'a, T> {
     state: KeyState,
-    key: Key,
+    key: Key<'a>,
     modifiers: Modifiers,
     matched: bool,
     value: Option<T>,
 }
 
-impl<T> ShortcutMatcher<T> {
+impl<'a, T> ShortcutMatcher<'a, T> {
     /// Create a new shortcut matcher.
-    pub fn new(state: KeyState, key: Key, mut modifiers: Modifiers) -> ShortcutMatcher<T> {
+    pub fn new(state: KeyState, key: Key<'a>, mut modifiers: Modifiers) -> ShortcutMatcher<T> {
         modifiers &= Modifiers::SHIFT | Modifiers::CONTROL | Modifiers::ALT | Modifiers::META;
         ShortcutMatcher {
             state,
@@ -76,7 +76,7 @@ impl<T> ShortcutMatcher<T> {
     /// // If none of the previous shortcuts matched forward the event.
     /// .otherwise(forward_event);
     /// ```
-    pub fn shortcut<K, F>(mut self, modifiers: Modifiers, key: K, f: F) -> ShortcutMatcher<T>
+    pub fn shortcut<K, F>(mut self, modifiers: Modifiers, key: K, f: F) -> ShortcutMatcher<'a, T>
     where
         K: MatchKey,
         F: (FnOnce() -> T),
@@ -128,7 +128,7 @@ impl<T> ShortcutMatcher<T> {
         modifiers: Modifiers,
         key: K,
         f: F,
-    ) -> ShortcutMatcher<T>
+    ) -> ShortcutMatcher<'a, T>
     where
         K: MatchKey,
         F: (FnOnce() -> T),
@@ -157,17 +157,17 @@ impl<T> ShortcutMatcher<T> {
 }
 
 pub trait MatchKey {
-    fn match_key(&self, key: &Key) -> bool;
+    fn match_key(&self, key: &Key<'_>) -> bool;
 }
 
-impl MatchKey for Key {
-    fn match_key(&self, key: &Key) -> bool {
+impl<'a> MatchKey for Key<'a> {
+    fn match_key(&self, key: &Key<'_>) -> bool {
         self == key
     }
 }
 
 impl MatchKey for char {
-    fn match_key(&self, key: &Key) -> bool {
+    fn match_key(&self, key: &Key<'_>) -> bool {
         match key {
             Key::Character(text) => {
                 let mut buf = [0; 4];

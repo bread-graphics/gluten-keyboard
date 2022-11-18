@@ -4,7 +4,10 @@
 //! but this crate should be useful for anyone implementing keyboard
 //! input in a cross-platform way.
 
-use std::fmt;
+#![forbid(unsafe_code, future_incompatible)]
+#![no_std]
+
+use core::fmt;
 
 pub use code::{Code, UnrecognizedCodeError};
 pub use key::{Key, UnrecognizedKeyError};
@@ -12,30 +15,23 @@ pub use location::Location;
 pub use modifiers::Modifiers;
 pub use shortcuts::ShortcutMatcher;
 
-#[macro_use]
-extern crate bitflags;
-#[cfg(feature = "serde")]
-#[macro_use]
-extern crate serde;
-#[cfg(feature = "webdriver")]
-extern crate unicode_segmentation;
-
+#[rustfmt::skip]
 mod code;
+#[rustfmt::skip]
 mod key;
 mod location;
 mod modifiers;
 mod shortcuts;
-#[cfg(feature = "webdriver")]
-pub mod webdriver;
 
 /// Describes the state the key is in.
-#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum KeyState {
     /// Key is pressed.
     ///
     /// In JS: "keydown" event firing.
     Down,
+
     /// Key is released.
     ///
     /// In JS: "keyup event".
@@ -43,34 +39,43 @@ pub enum KeyState {
 }
 
 /// Keyboard events are issued for all pressed and released keys.
-#[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct KeyboardEvent {
+#[derive(Clone, Debug, Default, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(bound(deserialize = "'de: 'a")))]
+pub struct KeyboardEvent<'a> {
     /// Whether the key is pressed or released.
     pub state: KeyState,
+
     /// Logical key value.
-    pub key: Key,
+    pub key: Key<'a>,
+
     /// Physical key position.
     pub code: Code,
+
     /// Location for keys with multiple instances on common keyboards.
     pub location: Location,
+
     /// Flags for pressed modifier keys.
     pub modifiers: Modifiers,
+
     /// True if the key is currently auto-repeated.
     pub repeat: bool,
+
     /// Events with this flag should be ignored in a text editor
     /// and instead composition events should be used.
     pub is_composing: bool,
 }
 
 /// Describes the state of a composition session.
-#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum CompositionState {
     /// In JS: "compositionstart" event.
     Start,
+
     /// In JS: "compositionupdate" event.
     Update,
+
     /// In JS: "compositionend" event.
     ///
     /// In a text editor in this state the data
@@ -96,13 +101,14 @@ impl fmt::Display for CompositionState {
 /// A composition session is always started by a "compositionstart"
 /// event followed my zero or more "compositionupdate" events
 /// and terminated by a single "compositionend" event.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct CompositionEvent {
+#[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct CompositionEvent<'a> {
     /// Describes the event kind.
     pub state: CompositionState,
+
     /// Current composition data. May be empty.
-    pub data: String,
+    pub data: &'a str,
 }
 
 impl fmt::Display for KeyState {
@@ -114,7 +120,7 @@ impl fmt::Display for KeyState {
     }
 }
 
-impl Key {
+impl Key<'_> {
     /// Determine a *charCode* value for a key with a character value.
     ///
     /// For all other keys the value is zero.
@@ -125,7 +131,7 @@ impl Key {
         // Spec: event.charCode = event.key.charCodeAt(0)
         // otherwise 0
         match self {
-            Key::Character(ref c) => c.chars().next().unwrap_or('\0') as u32,
+            Key::Character(c) => c.chars().next().unwrap_or('\0') as u32,
             _ => 0,
         }
     }
@@ -155,7 +161,7 @@ impl Key {
             Key::ArrowRight => 39,
             Key::ArrowDown => 40,
             Key::Delete => 46,
-            Key::Character(ref c) if c.len() == 1 => match first_char(c) {
+            Key::Character(c) if c.len() == 1 => match first_char(c) {
                 ' ' => 32,
                 x @ '0'..='9' => x as u32,
                 x @ 'a'..='z' => x.to_ascii_uppercase() as u32,
@@ -185,8 +191,8 @@ impl Default for KeyState {
     }
 }
 
-impl Default for Key {
-    fn default() -> Key {
+impl Default for Key<'_> {
+    fn default() -> Self {
         Key::Unidentified
     }
 }

@@ -47,22 +47,23 @@ def convert_key(text, file):
     print("""
 // AUTO GENERATED CODE - DO NOT EDIT
 
-use std::fmt::{self, Display};
-use std::str::FromStr;
+use core::fmt::{self, Display};
+
+#[cfg(feature = "std")]
 use std::error::Error;
 
 /// Key represents the meaning of a keypress.
 ///
 /// Specification:
 /// <https://w3c.github.io/uievents-key/>
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Clone, Debug, Eq, PartialEq, Hash, PartialOrd, Ord, Copy)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[non_exhaustive]
-pub enum Key {
+pub enum Key<'a> {
     /// A key string that corresponds to the character typed by the user,
     /// taking into account the user’s current locale setting, modifier state,
     /// and any system-level keyboard mapping overrides that are in effect.
-    Character(String),
+    Character(&'a str),
     """, file=file)
     display = parse(text)
 
@@ -78,11 +79,11 @@ pub enum Key {
 
     print("""
 
-impl Display for Key {
+impl Display for Key<'_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use self::Key::*;
         match *self {
-            Character(ref s) => write!(f, "{}", s),
+            Character(s) => f.write_str(s),
     """, file=file)
     print_display_entries(display, file)
     print("""
@@ -90,13 +91,12 @@ impl Display for Key {
     }
 }
 
-impl FromStr for Key {
-    type Err = UnrecognizedKeyError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+impl<'a> Key<'a> {
+    /// Parse this `Key` from a string.
+    pub fn parse(s: &'a str) -> Result<Self, UnrecognizedKeyError> {
         use Key::*;
         match s {
-            s if is_key_string(s) => Ok(Character(s.to_string())),""", file=file)
+            s if is_key_string(s) => Ok(Character(s)),""", file=file)
     print_from_str_entries(display, file)
     print("""
             _ => Err(UnrecognizedKeyError),
@@ -114,6 +114,7 @@ impl fmt::Display for UnrecognizedKeyError {
     }
 }
 
+#[cfg(feature = "std")]
 impl Error for UnrecognizedKeyError {}
 
 /// Check if string can be used as a `Key::Character` _keystring_.
@@ -142,8 +143,10 @@ def convert_code(text, file):
     print("""
 // AUTO GENERATED CODE - DO NOT EDIT
 
-use std::fmt::{self, Display};
-use std::str::FromStr;
+use core::fmt::{self, Display};
+use core::str::FromStr;
+
+#[cfg(feature = "std")]
 use std::error::Error;
 
 /// Code is the physical position of a key.
@@ -154,8 +157,8 @@ use std::error::Error;
 ///
 /// Specification:
 /// <https://w3c.github.io/uievents-code/>
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[non_exhaustive]
 pub enum Code {""", file=file)
     display = parse(text)
@@ -243,6 +246,7 @@ impl fmt::Display for UnrecognizedCodeError {
     }
 }
 
+#[cfg(feature = "std")]
 impl Error for UnrecognizedCodeError {}
     """, file=file)
 

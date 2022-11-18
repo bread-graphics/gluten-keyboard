@@ -1,22 +1,23 @@
 
 // AUTO GENERATED CODE - DO NOT EDIT
 
-use std::fmt::{self, Display};
-use std::str::FromStr;
+use core::fmt::{self, Display};
+
+#[cfg(feature = "std")]
 use std::error::Error;
 
 /// Key represents the meaning of a keypress.
 ///
 /// Specification:
 /// <https://w3c.github.io/uievents-key/>
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Clone, Debug, Eq, PartialEq, Hash, PartialOrd, Ord, Copy)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[non_exhaustive]
-pub enum Key {
+pub enum Key<'a> {
     /// A key string that corresponds to the character typed by the user,
     /// taking into account the user’s current locale setting, modifier state,
     /// and any system-level keyboard mapping overrides that are in effect.
-    Character(String),
+    Character(&'a str),
     
     /// This key value is used when an implementation is unable to
     /// identify another key value, due to either hardware,
@@ -644,11 +645,11 @@ pub enum Key {
 }
 
 
-impl Display for Key {
+impl Display for Key<'_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use self::Key::*;
         match *self {
-            Character(ref s) => write!(f, "{}", s),
+            Character(s) => f.write_str(s),
     
             Unidentified => f.write_str("Unidentified"),
             Alt => f.write_str("Alt"),
@@ -951,13 +952,12 @@ impl Display for Key {
     }
 }
 
-impl FromStr for Key {
-    type Err = UnrecognizedKeyError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+impl<'a> Key<'a> {
+    /// Parse this `Key` from a string.
+    pub fn parse(s: &'a str) -> Result<Self, UnrecognizedKeyError> {
         use Key::*;
         match s {
-            s if is_key_string(s) => Ok(Character(s.to_string())),
+            s if is_key_string(s) => Ok(Character(s)),
             "Unidentified" => Ok(Unidentified),
             "Alt" => Ok(Alt),
             "AltGraph" => Ok(AltGraph),
@@ -1270,6 +1270,7 @@ impl fmt::Display for UnrecognizedKeyError {
     }
 }
 
+#[cfg(feature = "std")]
 impl Error for UnrecognizedKeyError {}
 
 /// Check if string can be used as a `Key::Character` _keystring_.
